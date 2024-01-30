@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat en temps réel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="compteur">
+        0
+    </div>
+
+    <div class="container">
+        <h1>Chat en temps réel</h1>
+
+        <form id="usernameForm">
+            <label for="username">Nom d'utilisateur :</label>
+            <input type="text" id="username" required />
+            <button type="submit">Entrer dans le chat</button>
+        </form>
+
+        <div id="chat" style="display: none;">
+            <ul id="messages"></ul>
+        </div>
+        <input type="text" id="inputMessage" disabled />
+        <button id="sendMessage" disabled>Envoyer</button>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+
+            const messagesList = document.getElementById('messages');
+            const inputMessage = document.getElementById('inputMessage');
+            const sendMessageButton = document.getElementById('sendMessage');
+            const usernameForm = document.getElementById('usernameForm');
+            const usernameInput = document.getElementById('username');
+
+            const compteur = document.getElementById('compteur');
+
+            usernameForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const username = usernameInput.value.trim();
+                if (username !== '') {
+                    usernameForm.style.display = 'none';
+                    document.getElementById('chat').style.display = 'block';
+                    inputMessage.removeAttribute('disabled');
+                    sendMessageButton.removeAttribute('disabled');
+
+                    socket.emit('newUser', username);
+                }
+            });
+
+            socket.on('chatMessage', (data) => {
+                appendMessage(data.username + ' : ' + data.message);
+                console.log(data);
+            });
+
+            socket.on('historiqueMessage', (historiqueMessage) => {
+                console.log(historiqueMessage);
+                historiqueMessage.forEach((message) => {
+                    const li = document.createElement('li');
+                    li.textContent = `username: ${message}`;
+                    li.classList.add("ghost-message");
+                    messagesList.appendChild(li)
+                });
+            });
+
+            socket.on('userCount', (compte) => {
+                compteur.textContent = compte;
+                console.log(compte);
+            })
+
+            function appendMyMessage(message) {
+                const li = document.createElement('li');
+                li.textContent = message;
+                messagesList.appendChild(li);
+
+                const span = document.createElement('span');
+                const heure = new Date();
+                span.textContent = "\n" + heure.getHours() + ":" + heure.getMinutes();
+                li.appendChild(span);
+
+                messagesList.scrollTop = messagesList.scrollHeight;
+            }
+
+            function appendMessage(message) {
+                const li = document.createElement('li');
+                li.textContent = message;
+                li.classList.add("gray-message");
+                messagesList.appendChild(li);
+
+                const span = document.createElement('span');
+                const heure = new Date();
+                span.textContent = "\n" + heure.getHours() + ":" + heure.getMinutes();
+                li.appendChild(span);
+
+                messagesList.scrollTop = messagesList.scrollHeight;
+            }
+
+            sendMessageButton.addEventListener('click', () => {
+                const message = inputMessage.value;
+                if (message.trim() !== '') {
+                    socket.emit('chatMessage', message);
+                    inputMessage.value = '';
+                    appendMyMessage('Moi : ' + message);
+                }
+            });
+
+        </script>
+    </div>
+</body>
+
+</html>
